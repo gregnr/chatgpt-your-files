@@ -1,0 +1,24 @@
+tasks:
+  - name: Install dependencies
+    init: | 
+      npm install
+      gp sync-done deps
+  - name: Start local Supabase stack & setup env vars
+    init: gp sync-wait deps
+    command: |
+      npx supabase start -x vector
+      npx supabase status -o env \
+        --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY |
+        grep NEXT_PUBLIC > .env.local && \
+        echo NEXT_PUBLIC_SUPABASE_URL=\"$(gp url $(node -p "new URL(($(npx supabase status -o json)).API_URL).port"))\" >> .env.local
+      gp sync-done supabase-setup
+  - name: Start local dev server
+    command: | 
+      gp sync-wait supabase-setup
+      npm run dev
+
+ports:
+  - name: Supabase API
+    description: The Supabase API gateway
+    port: 54321
+    visibility: public # The Supabase API must be public in order for Next.js server to connect to it
